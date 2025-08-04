@@ -1,0 +1,17 @@
+# --- Backend (Python) ---
+backend/__pycache__/
+backend/*.pyc
+backend/venv/
+backend/node_modules/
+
+# --- Frontend (Node.js) ---
+frontend/node_modules/
+frontend/dist/
+
+# --- Environment variables ---
+.env
+*.env
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
