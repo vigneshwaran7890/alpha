@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 const API_BASE_URL = 'http://localhost:5000/api'; // Update with your Node.js backend URL
 
 export interface LoginCredentials {
@@ -20,6 +22,7 @@ export interface User {
 export interface AuthResponse {
   success: boolean;
   message: string;
+  userData: string;
   token?: string;
   user?: User;
 }
@@ -27,38 +30,25 @@ export interface AuthResponse {
 // Login API call
 export const loginUser = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
+    const response = await axios.post(`${API_BASE_URL}/login`, credentials);
+    const data = response.data;
 
-    const data = await response.json();
-
-    if (response.ok) {
-      // Store token in localStorage
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
-      return {
-        success: true,
-        message: data.message || 'Login successful',
-        token: data.token,
-        user: data.user,
-      };
-    } else {
-      return {
-        success: false,
-        message: data.message || 'Login failed',
-      };
+    // Store token in localStorage
+    if (data.token) {
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
     }
-  } catch (error) {
+    return {
+      success: true,
+      message: data.message || 'Login successful',
+      userData: data.person,
+      token: data.token,
+      user: data.user,
+    };
+  } catch (error: any) {
     return {
       success: false,
-      message: 'Network error. Please try again.',
+      message: error.response?.data?.message || 'Login failed',
     };
   }
 };
@@ -66,7 +56,7 @@ export const loginUser = async (credentials: LoginCredentials): Promise<AuthResp
 // Signup API call
 export const signupUser = async (credentials: SignupCredentials): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    const response = await fetch(`${API_BASE_URL}/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

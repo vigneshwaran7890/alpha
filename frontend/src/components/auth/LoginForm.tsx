@@ -9,6 +9,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { loginUser, LoginCredentials } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 
 const LoginForm: React.FC = () => {
   const [credentials, setCredentials] = useState<LoginCredentials>({
@@ -21,7 +22,7 @@ const LoginForm: React.FC = () => {
 
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { toast } = useToast();
+  // const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,14 +40,14 @@ const LoginForm: React.FC = () => {
 
     try {
       const response = await loginUser(credentials);
-      
-      if (response.success && response.user && response.token) {
-        login(response.user, response.token);
+      console.log("response", response)
+      if (response.success ) {
         toast({
           title: "Welcome back!",
           description: response.message,
+          position: "top-right", 
         });
-        navigate('/home');
+        navigate('/home',{state:{ user: response.userData }});
       } else {
         setError(response.message);
       }
@@ -62,7 +63,7 @@ const LoginForm: React.FC = () => {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center mb-2">
-            <CardTitle className="text-3xl font-extrabold text-primary mb-1">Sign in to ChatApp</CardTitle>
+            <CardTitle className="text-3xl font-extrabold text-primary mb-1">Sign in to AgentAlpha</CardTitle>
             <CardDescription className="text-dark text-muted-foreground">Welcome back! Please enter your details.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -126,7 +127,7 @@ const LoginForm: React.FC = () => {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
+            {/* <div className="mt-6 text-center">
               <span className="text-sm text-muted-foreground">Don't have an account? </span>
               <Link
                 to="/signup"
@@ -134,7 +135,7 @@ const LoginForm: React.FC = () => {
               >
                 Sign up
               </Link>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </div>

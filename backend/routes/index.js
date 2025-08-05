@@ -2,7 +2,9 @@ import express from 'express';
 import {
     getPeople, enrichPerson, getEnrichedSnippets,
     getSearchLogs,
-    createPerson
+    createPerson,
+    loginPerson,
+    getSnippetWithLogs
 } from '../controllers/userController.js';
 
 const router = express.Router();
@@ -16,6 +18,8 @@ router.post('/enrich/:id', enrichPerson);
 router.get('/enriched-snippets', getEnrichedSnippets);
 router.get('/search-logs', getSearchLogs);
 router.post('/people', createPerson);
+router.post('/login', loginPerson);
+router.get('/api/snippet-with-logs/:snippetId', getSnippetWithLogs);
 
 
 export default router;

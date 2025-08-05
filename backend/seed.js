@@ -3,12 +3,16 @@ import dotenv from 'dotenv';
 import Campaign from './models/Campaign.js';
 import Company from './models/Company.js';
 import Person from './models/userModel.js';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
 const MONGO_URI = process.env.MONGO_URI;
 
 const seedData = async () => {
+    // Hash the passwords
+    const hashedPassword1 = await bcrypt.hash('securepassword123', 10);
+    const hashedPassword2 = await bcrypt.hash('securepassword123', 10);
     try {
         await mongoose.connect(MONGO_URI, {
             useNewUrlParser: true,
@@ -39,7 +43,7 @@ const seedData = async () => {
             {
                 company_id: company._id,
                 name: 'Sundhar Pichai',
-                password: 'securepassword123',
+                password: hashedPassword1,
                 role: 'admin',
                 email: 'Sundhar@gmail.com',
                 title: 'Google',
@@ -48,7 +52,7 @@ const seedData = async () => {
                 company_id: company._id,
                 name: 'Elan Mosk',
                 email: 'elan@gmail.com',
-                password: 'securepassword123',
+                password: hashedPassword2,
                 title: 'Head of Product',
             },
         ]);
