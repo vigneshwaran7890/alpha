@@ -4,7 +4,8 @@ import {
     getSearchLogs,
     createPerson,
     loginPerson,
-    getSnippetWithLogs
+    getSnippetWithLogs,
+    getAllSnippetsWithLogs
 } from '../controllers/userController.js';
 
 const router = express.Router();
@@ -19,7 +20,7 @@ router.get('/enriched-snippets', getEnrichedSnippets);
 router.get('/search-logs', getSearchLogs);
 router.post('/people', createPerson);
 router.post('/login', loginPerson);
-router.get('/api/snippet-with-logs/:snippetId', getSnippetWithLogs);
-
+router.get('/snippet-with-logs/:snippetId', getSnippetWithLogs);
+router.get('/all-snippets-with-logs', getAllSnippetsWithLogs);
 
 export default router;

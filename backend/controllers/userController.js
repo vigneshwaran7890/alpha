@@ -2,7 +2,7 @@ import { exec } from 'child_process';
 import path from 'path';
 import bcrypt from 'bcrypt';
 import Person from '../models/userModel.js'; // or wherever your User/Person model is
-import Company from '../models/Company.js'; 
+import Company from '../models/Company.js';
 import ContextSnippet from '../models/ContextSnippet.js'; // adjust path as needed
 import SearchLog from '../models/SearchLog.js'; // adjust path as needed
 
@@ -29,11 +29,35 @@ export const enrichPerson = async (req, res) => {
     }
 
     if (stderr) console.warn(`⚠️ Agent stderr: ${stderr}`);
-    console.log(`✅ Agent stdout: ${stdout}`);
 
-    res.json({ message: 'Agent executed successfully', output: stdout });
+    try {
+      // Match JSON object using regex: from `{` to the matching `}`
+      const jsonRegex = /{[^]*?context_snippet_id[^]*?}/g; // look for object that includes `context_snippet_id`
+      const matches = stdout.match(jsonRegex);
+
+      if (!matches || matches.length === 0) {
+        return res.status(404).json({ message: 'No valid JSON with context_snippet_id found in output' });
+      }
+
+      const cleanJsonStr = matches[matches.length - 1];
+
+      const parsed = JSON.parse(cleanJsonStr);
+      const contextSnippetId = parsed?.context_snippet_id;
+
+      if (!contextSnippetId) {
+        return res.status(404).json({ message: 'context_snippet_id not found in JSON' });
+      }
+
+      return res.json({ context_snippet_id: contextSnippetId });
+
+    } catch (parseError) {
+      console.error('❌ Failed to parse JSON from agent output:', parseError.message);
+      return res.status(500).json({ message: 'Failed to parse agent output', error: parseError.message });
+    }
   });
 };
+
+
 
 // GET /api/enriched-snippets
 export const getEnrichedSnippets = async (req, res) => {
@@ -135,6 +159,36 @@ export const getSnippetWithLogs = async (req, res) => {
     res.json({ context_snippet: snippet, search_logs: logs });
   } catch (err) {
     console.error('❌ Error fetching snippet with logs:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /api/all-snippets-with-logs
+export const getAllSnippetsWithLogs = async (req, res) => {
+  try {
+    // Fetch all context snippets
+    const snippets = await ContextSnippet.find();
+
+    // Fetch all search logs
+    const logs = await SearchLog.find();
+
+    // Map logs to their corresponding snippet
+    const logsBySnippetId = logs.reduce((acc, log) => {
+      const id = log.context_snippet_id?.toString();
+      if (!acc[id]) acc[id] = [];
+      acc[id].push(log);
+      return acc;
+    }, {});
+
+    // Attach logs to each snippet
+    const result = snippets.map(snippet => ({
+      context_snippet: snippet,
+      search_logs: logsBySnippetId[snippet._id.toString()] || []
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('❌ Error fetching all snippets with logs:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
