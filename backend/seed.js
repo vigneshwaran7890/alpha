@@ -30,24 +30,24 @@ const seedData = async () => {
         // Create Company
         const company = await Company.create({
             campaign_id: campaign._id,
-            name: 'InnovateX Inc.',
-            domain: 'innovatex.com',
+            name: 'Alpha Innovatex',
+            domain: 'Alpha.com',
         });
 
         // Create People
         await Person.create([
             {
                 company_id: company._id,
-                name: 'Jane Doe',
+                name: 'Sundhar Pichai',
                 password: 'securepassword123',
                 role: 'admin',
-                email: 'jane@innovatex.com',
-                title: 'CTO',
+                email: 'Sundhar@gmail.com',
+                title: 'Google',
             },
             {
                 company_id: company._id,
-                name: 'John Smith',
-                email: 'john@innovatex.com',
+                name: 'Elan Mosk',
+                email: 'elan@gmail.com',
                 password: 'securepassword123',
                 title: 'Head of Product',
             },

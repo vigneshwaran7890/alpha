@@ -2,6 +2,8 @@ import { exec } from 'child_process';
 import path from 'path';
 import Person from '../models/userModel.js'; // or wherever your User/Person model is
 import Company from '../models/Company.js'; 
+import ContextSnippet from '../models/ContextSnippet.js'; // adjust path as needed
+import SearchLog from '../models/SearchLog.js'; // adjust path as needed
 
 // GET /api/people
 export const getPeople = async (req, res) => {
@@ -30,6 +32,40 @@ export const enrichPerson = async (req, res) => {
 
     res.json({ message: 'Agent executed successfully', output: stdout });
   });
+};
+
+// GET /api/enriched-snippets
+export const getEnrichedSnippets = async (req, res) => {
+  try {
+    const snippets = await ContextSnippet.find();
+    res.json(snippets);
+  } catch (err) {
+    console.error('❌ Error fetching enriched snippets:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /api/search-logs
+export const getSearchLogs = async (req, res) => {
+  try {
+    const logs = await SearchLog.find();
+    res.json(logs);
+  } catch (err) {
+    console.error('❌ Error fetching search logs:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// POST /api/people
+export const createPerson = async (req, res) => {
+  try {
+    const person = new Person(req.body);
+    await person.save();
+    res.status(201).json(person);
+  } catch (err) {
+    console.error('❌ Error creating person:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 

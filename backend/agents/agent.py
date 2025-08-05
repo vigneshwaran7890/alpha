@@ -1,138 +1,164 @@
-import uuid
-import os
 import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import json
 from datetime import datetime
 from pymongo import MongoClient
+from uuid import uuid4
 from dotenv import load_dotenv
+from langchain_core.tools import Tool
+from langchain.agents import initialize_agent, AgentType
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.utilities import SerpAPIWrapper
+from utils.gemini_key_picker import get_random_gemini_key
+
+import re
 
 # Load .env
 load_dotenv()
-
-# MongoDB connection string from .env
 MONGO_URI = os.getenv("MONGO_URI")
-if not MONGO_URI:
-    print("[ERROR] MONGO_URI not found in .env file")
-    sys.exit(1)
-
-# Connect to MongoDB
+GEMINI_API_KEY = get_random_gemini_key()
+SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
+print("GEMINI_API_KEY:", GEMINI_API_KEY)
+# Setup DB
 client = MongoClient(MONGO_URI)
-db = client["test"]  # Replace with your actual DB name if different
+db = client["test"]  # Ensure using correct DB
+t_users = db["users"]
+t_companies = db["companies"]
+t_snippets = db["contextsnippets"]
+t_logs = db["searchlogs"]
 
-# Fields agent must extract
-REQUIRED_FIELDS = [
-    "company_value_prop",
-    "product_names",
-    "pricing_model",
-    "key_competitors",
-    "company_domain"
+# Setup Gemini & Tools
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    google_api_key=GEMINI_API_KEY,
+    temperature=0.7
+)
+search_tool = SerpAPIWrapper(serpapi_api_key=SERPAPI_API_KEY)
+
+tools = [
+    Tool(
+        name="search",
+        func=search_tool.run,
+        description="Useful for answering search queries about companies, people, or products."
+    )
 ]
 
-# Simulated search results
-def mock_search(query):
-    return [
-        {
-            "url": f"https://example.com/{uuid.uuid4()}",
-            "snippet": f"Info about {query} from source A."
-        },
-        {
-            "url": f"https://example.org/{uuid.uuid4()}",
-            "snippet": f"Details on {query} from source B."
-        },
-        {
-            "url": f"https://sample.net/{uuid.uuid4()}",
-            "snippet": f"Additional context on {query} from source C."
-        }
-    ]
+agent = initialize_agent(
+    tools=tools,
+    llm=llm,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    verbose=True
+)
 
-# Extract simulated data from results
-def extract_fields(snippets, current_fields):
-    if "company_value_prop" not in current_fields:
-        current_fields["company_value_prop"] = "We empower businesses with AI-powered automation."
+FIELDS_TO_EXTRACT = {
+    "company_value_prop": "What is the company’s value proposition?",
+    "product_names": "What products or services does the company offer?",
+    "target_customer": "Who is the company’s target customer?",
+}
 
-    if "product_names" not in current_fields:
-        current_fields["product_names"] = ["AutoFlow", "InsightX"]
+def extract_urls(results):
+    urls = []
+    url_pattern = re.compile(r'https?://[^\s\'",]+')
+    if isinstance(results, list):
+        for item in results:
+            # If item is a dict and has 'link' or 'url'
+            if isinstance(item, dict):
+                for k in ['link', 'url']:
+                    if k in item and isinstance(item[k], str):
+                        urls.append(item[k])
+                # Also check all string values for URLs
+                for v in item.values():
+                    if isinstance(v, str):
+                        urls.extend(url_pattern.findall(v))
+            elif isinstance(item, str):
+                urls.extend(url_pattern.findall(item))
+    elif isinstance(results, str):
+        urls.extend(url_pattern.findall(results))
+    return list(set(urls))
 
-    if "pricing_model" not in current_fields:
-        current_fields["pricing_model"] = "Subscription-based with tiered plans"
-
-    if "key_competitors" not in current_fields:
-        current_fields["key_competitors"] = ["CompeteX", "SmartAI"]
-
-    if "company_domain" not in current_fields:
-        current_fields["company_domain"] = "example.com"
-
-    return current_fields
-
-# Main agent logic
 def run_agent(person_id):
     print(f"[INFO] Running agent for person ID: {person_id}")
 
-    # Fetch user
-    person = db.users.find_one({ "_id": person_id })
-
+    person = t_users.find_one({"_id": person_id})
     if not person:
-        print(f"[ERROR] Person with ID {person_id} not found.")
-        print("[DEBUG] Listing all users in 'users' collection:")
-        found = False
-        for user in db.users.find({}, {"_id": 1, "name": 1}):
-            print("-", user["_id"], "|", user.get("name"))
-            found = True
-        if not found:
-            print("[DEBUG] No users found.")
+        print(json.dumps({"status": "error", "message": f"Person with ID {person_id} not found."}))
         return
 
-    # Fetch company
-    company = db.companies.find_one({ "_id": person["company_id"] })
+    company = t_companies.find_one({"_id": person["company_id"]})
     if not company:
-        print(f"[ERROR] Company with ID {person['company_id']} not found.")
+        print(json.dumps({"status": "error", "message": f"Company not found for person {person['name']}"}))
         return
 
-    context_id = str(uuid.uuid4())
     found_fields = {}
-    all_urls = []
+    context_id = str(uuid4())
+    iteration = 1
+    source_urls = []
 
-    for iteration in range(1, 4):  # Up to 3 search passes
-        missing = [field for field in REQUIRED_FIELDS if field not in found_fields]
-        if not missing:
-            break
-
-        query = f"{person['name']} {person['email']} {missing[0]}"
+    for key, question in FIELDS_TO_EXTRACT.items():
+        query = f"{company['name']} {person['name']} {person['title']} {key.replace('_', ' ')}"
         print(f"[INFO] Iteration {iteration} - Query: {query}")
-        results = mock_search(query)
-        snippets = [r["snippet"] for r in results]
-        urls = [r["url"] for r in results]
-        all_urls.extend(urls)
 
-        # Log search iteration
-        db.search_logs.insert_one({
-            "_id": str(uuid.uuid4()),
+        try:
+            raw_results = search_tool.run(query)
+            result = agent.run(query)
+        except Exception as e:
+            print(f"[ERROR] Agent execution failed: {e}")
+            result = None
+            raw_results = []
+
+        if result:
+            found_fields[key] = result
+
+        # Collect source URLs robustly from both raw_results and result
+        source_urls.extend(extract_urls(raw_results))
+        source_urls.extend(extract_urls(result))
+
+        # Save search log
+        t_logs.insert_one({
+            "_id": str(uuid4()),
             "context_snippet_id": context_id,
             "iteration": iteration,
             "query": query,
-            "top_results": results,
+            "top_results": raw_results if isinstance(raw_results, list) else [raw_results],
             "created_at": datetime.utcnow()
         })
 
-        # Extract fields
-        found_fields = extract_fields(snippets, found_fields)
+        iteration += 1
 
-    # Save final research result
-    db.context_snippets.insert_one({
-        "_id": context_id,
-        "entity_type": "company",
-        "entity_id": person["company_id"],
-        "snippet_type": "research",
-        "payload": found_fields,
-        "source_urls": list(set(all_urls)),
-        "created_at": datetime.utcnow()
-    })
+    # Save enriched context snippet
+    try:
+        insert_result = t_snippets.insert_one({
+            "_id": context_id,
+            "entity_type": "person",
+            "entity_id": person_id,
+            "snippet_type": "research",
+            "payload": found_fields,
+            "source_urls": source_urls,
+            "created_at": datetime.utcnow()
+        })
+        print("[DB] Snippet inserted with ID:", insert_result.inserted_id)
+    except Exception as db_error:
+        print("[DB ERROR] Failed to insert snippet:", str(db_error))
 
-    print(f"[SUCCESS] Agent completed for {person['name']}")
+    print("[SUCCESS] Agent completed for", person["name"])
+    return {
+        "status": "success",
+        "person_id": person_id,
+        "person_name": person["name"],
+        "company_id": company["_id"],
+        "company_name": company["name"],
+        "enriched_data": found_fields,
+        "context_snippet_id": context_id
+    }
 
-# CLI entry point
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python agent.py <person_id>")
+        print(json.dumps({
+            "status": "error",
+            "message": "❗ Usage: python agent.py <person_id>"
+        }))
         sys.exit(1)
 
-    run_agent(sys.argv[1])
+    result = run_agent(sys.argv[1])
+    print(json.dumps(result, indent=2))

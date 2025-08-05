@@ -7,3 +7,5 @@ uvicorn
 duckduckgo-search
 python-dotenv
 pydantic
+pymongo
+
