@@ -13,6 +13,8 @@ This is the frontend for the Alpha Assessment project, built with Vite, React, T
 - [TypeScript](https://www.typescriptlang.org/)
 - [shadcn-ui](https://ui.shadcn.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
+- [Socket.IO Client](https://socket.io/docs/v4/client-api/) – Real-time enrichment progress
+- [Axios](https://axios-http.com/) – API requests
 
 ## 📦 Getting Started
 
@@ -64,6 +66,11 @@ You can edit the code using:
 ## 🌐 Deployment
 
 You can deploy directly from Lovable or use your preferred static hosting provider (e.g., Vercel, Netlify).
+
+## 📡 Real-time Enrichment
+
+This frontend connects to the backend enrichment endpoint using **Socket.IO** for real-time progress updates when enriching a person.  
+Make sure your backend is running and accessible at the configured API URL.
 
 ## 📝 License
 

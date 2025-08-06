@@ -21,6 +21,7 @@ This project is a backend system designed for enriching user data (like company 
 - **bcrypt** - Password hashing
 - **dotenv** - Env variable management
 - **morgan + cors** - Logging and CORS middleware
+- **Socket.IO** - Real-time progress updates for enrichment endpoint
 
 ---
 
@@ -117,17 +118,36 @@ langchain-community
 
 ## 🛠️ API Endpoints
 
+### 🧠 Enrichment
+
+#### POST /api/enrich/:id
+
+Triggers AI enrichment for a person by ID.  
+Runs the Python agent and streams progress, errors, and completion via Socket.IO.
+
+**Headers:**
+- `x-socket-id`: (string) The Socket.IO client ID to receive real-time updates.
+
+**Response:**
+- `200 OK` with `{ context_snippet_id: string }` on success.
+- `404 Not Found` or `500 Internal Server Error` with error message on failure.
+
+**Example:**
+```http
+POST /api/enrich/abc-uuid
+x-socket-id: <socket-id>
+```
+Response:
+```json
+{
+  "context_snippet_id": "snippet-uuid"
+}
+```
+
 ### 🔐 Auth & Users
 
 * `POST /api/people` — Create a user
 * `POST /api/login` — Login a user
-
-### 🧠 Enrichment
-
-* `POST /api/enrich/:id` — Trigger AI enrichment for a person
-* `GET /api/enriched-snippets` — Get all enriched snippets
-* `GET /api/snippet-with-logs/:snippetId` — Get one snippet with logs
-* `GET /api/all-snippets-with-logs` — Get all snippets with logs
 
 ### 📖 Logs
 
@@ -178,4 +198,3 @@ MIT — free to use and modify.
 ---
 
 Let me know if you want a `requirements.txt`, OpenAPI spec, or Postman collection too.
-```
