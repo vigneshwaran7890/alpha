@@ -2,9 +2,6 @@
 
 This is the frontend for the Alpha Assessment project, built with Vite, React, TypeScript, shadcn-ui, and Tailwind CSS.
 
-## 🚀 Project Info
-
-- **Live URL:** https://lovable.dev/projects/73e7d415-0aaa-4e76-a952-a656907b29de
 
 ## 🛠️ Tech Stack
 
@@ -59,7 +56,6 @@ npm run preview
 
 You can edit the code using:
 
-- [Lovable](https://lovable.dev/projects/73e7d415-0aaa-4e76-a952-a656907b29de)
 - Your preferred IDE (VS Code recommended)
 - GitHub web editor or Codespaces
 
@@ -76,6 +72,4 @@ Make sure your backend is running and accessible at the configured API URL.
 
 MIT — free to use and modify.
 
----
 
-For more details, see the [Lovable Project](https://lovable.dev/projects/73e7d415-0aaa-4e76-a952-a656907b29de).
