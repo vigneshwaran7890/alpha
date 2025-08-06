@@ -110,7 +110,6 @@ const Home = () => {
 
   const getAllSnippetsWithLogs = async () => {
     setIsHistoryLoading(true);
-    setActiveTab('history');
     try {
       const data = await fetchAllSnippetsWithLogs();
       if (data) {
@@ -129,6 +128,11 @@ const Home = () => {
     }
   };
 
+  const handleHistoryTabClick = () => {
+    setActiveTab('history');
+    getAllSnippetsWithLogs();
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setOnClickData(null);
@@ -137,6 +141,7 @@ const Home = () => {
   const closeHistory = () => {
     setIsHistoryOpen(false);
     setAllSnippetsWithLogs([]);
+    setActiveTab('users');
   };
 
   const filteredUsers = usersData.filter(user =>
@@ -166,7 +171,7 @@ const Home = () => {
             Users
           </button>
           <button
-            onClick={getAllSnippetsWithLogs}
+            onClick={handleHistoryTabClick}
             className={`flex items-center w-full p-3 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-indigo-600 bg-opacity-30' : 'hover:bg-indigo-600 hover:bg-opacity-20'}`}
           >
             <Clock className="mr-3" size={18} />
@@ -202,16 +207,18 @@ const Home = () => {
               {activeTab === 'users' ? 'User Dashboard' : 'Search History'}
             </h1>
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+              {activeTab === 'users' && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              )}
               <div className="flex items-center space-x-2 bg-gray-100 p-2 rounded-lg">
                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
                   <User className="text-indigo-600" size={18} />
@@ -233,7 +240,7 @@ const Home = () => {
               Users
             </button>
             <button
-              onClick={getAllSnippetsWithLogs}
+              onClick={handleHistoryTabClick}
               className={`flex-1 py-3 font-medium ${activeTab === 'history' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
             >
               History
@@ -241,9 +248,10 @@ const Home = () => {
           </div>
 
           {/* Loading State */}
-          {isLoading && (
+          {isLoading && activeTab === 'users' && (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="animate-spin text-indigo-600" size={32} />
+              <span className="ml-3 text-gray-600">Loading users...</span>
             </div>
           )}
 
@@ -264,7 +272,6 @@ const Home = () => {
           {/* Users Tab Content */}
           {activeTab === 'users' && !isLoading && (
             <div>
-
               {filteredUsers.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm p-8 text-center">
                   <Search className="mx-auto text-gray-400" size={48} />
@@ -283,6 +290,21 @@ const Home = () => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* History Tab Content */}
+          {activeTab === 'history' && (
+            <div>
+              {isHistoryLoading ? (
+                <div className="flex flex-col items-center justify-center h-64">
+                  <Loader2 className="animate-spin text-indigo-600" size={32} />
+                  <p className="mt-4 text-gray-500">Loading history data...</p>
+                </div>
+              ) : (
+                ""
+              )
+              }
             </div>
           )}
         </main>

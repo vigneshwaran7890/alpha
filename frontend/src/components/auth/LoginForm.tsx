@@ -8,13 +8,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { loginUser, LoginCredentials } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { toast } from 'react-hot-toast';
 
 const LoginForm: React.FC = () => {
   const [credentials, setCredentials] = useState<LoginCredentials>({
-    email: '',
-    password: '',
+    email: 'Sundhar@gmail.com',
+    password: 'securepassword123',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -84,6 +83,7 @@ const LoginForm: React.FC = () => {
                   value={credentials.email}
                   onChange={handleInputChange}
                   required
+                  className='text-gray-800'
                 />
               </div>
 

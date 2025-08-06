@@ -176,7 +176,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
                                     <div className="space-y-4">
                                       {snippetData.context_snippet?.payload?.company_value_prop && (
                                         <div>
-                                          <h5 className="font-medium text-gray-700 mb-2">Company Value Proposition</h5>
+                                          <h5 className="font-medium mb-2">Company Value Proposition</h5>
                                           <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-line">
                                             {cleanMarkdown(snippetData.context_snippet.payload.company_value_prop)}
                                           </div>
