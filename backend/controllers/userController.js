@@ -21,37 +21,64 @@ export const getPeople = async (req, res) => {
 export const enrichPerson = async (req, res) => {
   const personId = req.params.id;
   const scriptPath = path.resolve('agents/agent.py');
+  const io = req.app.get('io');
+  const socketId = req.headers['x-socket-id']; // Client should send this header
 
-  exec(`python ${scriptPath} ${personId}`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`❌ Agent error: ${error.message}`);
-      return res.status(500).json({ message: 'Agent failed to run', error: error.message });
+  // Start the agent process
+  const child = exec(`python ${scriptPath} ${personId}`);
+
+  let stdoutBuffer = '';
+  let stderrBuffer = '';
+
+  child.stdout.on('data', (data) => {
+    stdoutBuffer += data;
+    // Emit progress to the client
+    if (io && socketId) {
+      io.to(socketId).emit('enrich-progress', { message: data.toString() });
     }
+  });
 
-    if (stderr) console.warn(`⚠️ Agent stderr: ${stderr}`);
+  child.stderr.on('data', (data) => {
+    stderrBuffer += data;
+    if (io && socketId) {
+      io.to(socketId).emit('enrich-error', { error: data.toString() });
+    }
+  });
 
+  child.on('close', (code) => {
     try {
-      // Match JSON object using regex: from `{` to the matching `}`
-      const jsonRegex = /{[^]*?context_snippet_id[^]*?}/g; // look for object that includes `context_snippet_id`
-      const matches = stdout.match(jsonRegex);
+      // Try to extract the JSON result as before
+      const jsonRegex = /{[^]*?context_snippet_id[^]*?}/g;
+      const matches = stdoutBuffer.match(jsonRegex);
 
       if (!matches || matches.length === 0) {
+        if (io && socketId) {
+          io.to(socketId).emit('enrich-complete', { error: 'No valid JSON with context_snippet_id found in output' });
+        }
         return res.status(404).json({ message: 'No valid JSON with context_snippet_id found in output' });
       }
 
       const cleanJsonStr = matches[matches.length - 1];
-
       const parsed = JSON.parse(cleanJsonStr);
       const contextSnippetId = parsed?.context_snippet_id;
 
       if (!contextSnippetId) {
+        if (io && socketId) {
+          io.to(socketId).emit('enrich-complete', { error: 'context_snippet_id not found in JSON' });
+        }
         return res.status(404).json({ message: 'context_snippet_id not found in JSON' });
+      }
+
+      if (io && socketId) {
+        io.to(socketId).emit('enrich-complete', { context_snippet_id: contextSnippetId });
       }
 
       return res.json({ context_snippet_id: contextSnippetId });
 
     } catch (parseError) {
-      console.error('❌ Failed to parse JSON from agent output:', parseError.message);
+      if (io && socketId) {
+        io.to(socketId).emit('enrich-complete', { error: parseError.message });
+      }
       return res.status(500).json({ message: 'Failed to parse agent output', error: parseError.message });
     }
   });
